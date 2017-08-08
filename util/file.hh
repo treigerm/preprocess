@@ -94,6 +94,8 @@ class EndOfFileException : public Exception {
 
 // Open for read only.  
 int OpenReadOrThrow(const char *name);
+// Open for write.  
+int OpenWriteOrThrow(const char *name);
 // Create file if it doesn't exist, truncate if it does.  Opened for write.   
 int CreateOrThrow(const char *name);
 

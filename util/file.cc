@@ -69,6 +69,16 @@ int OpenReadOrThrow(const char *name) {
   return ret;
 }
 
+int OpenWriteOrThrow(const char *name) {
+  int ret;
+#if defined(_WIN32) || defined(_WIN64)
+  UTIL_THROW_IF(-1 == (ret = _open(name, _O_BINARY | _O_WRONLY)), ErrnoException, "while opening " << name);
+#else
+  UTIL_THROW_IF(-1 == (ret = open(name, O_WRONLY)), ErrnoException, "while opening " << name);
+#endif
+  return ret;
+}
+
 int CreateOrThrow(const char *name) {
   int ret;
 #if defined(_WIN32) || defined(_WIN64)
