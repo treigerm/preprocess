@@ -5,15 +5,19 @@ exe select_latin : select_latin.cc icui18n ../util//kenutil ;
 exe gigaword_unwrap : gigaword_unwrap.cc ../util//kenutil ;
 exe dedupe : dedupe_main.cc ../util//kenutil ;
 exe shard : shard_main.cc ../util//kenutil ;
+exe shard_fifo : shard_fifo_main.cc ../util//kenutil ;
 exe commoncrawl_dedupe : commoncrawl_dedupe_main.cc ../util//kenutil ;
+exe commoncrawl_dedupe_save_table : commoncrawl_dedupe_save_table_main.cc ../util//kenutil ;
 exe vocab : vocab_main.cc ../util//kenutil ;
 exe remove_long_lines : remove_long_lines_main.cc ../util//kenutil ;
 exe remove_invalid_utf8 : remove_invalid_utf8_main.cc ../util//kenutil ;
+exe commoncrawl_clean : commoncrawl_clean_main.cc ../util//kenutil ;
 exe process_unicode : process_unicode.cc ../util//kenutil /top//boost_program_options icui18n icuio ;
 exe truecase : truecase_main.cc ../util//kenutil ;
+exe test_hash_table : test_hash_table.cc ../util//kenutil ;
 exe train_case : train_case_main.cc ../util//kenutil ;
 exe apply_case : apply_case_main.cc ../util//kenutil ;
 
-alias programs : select_latin gigaword_unwrap dedupe commoncrawl_dedupe vocab remove_long_lines remove_invalid_utf8 process_unicode train_case apply_case truecase shard ;
+alias programs : select_latin gigaword_unwrap dedupe commoncrawl_dedupe commoncrawl_dedupe_save_table vocab remove_long_lines remove_invalid_utf8 commoncrawl_clean process_unicode train_case apply_case truecase test_hash_table shard shard_fifo ;
 
 alias scripts : [ glob moses/share/nonbreaking_prefixes/* ] [ glob-tree *.perl *.sh ] ;

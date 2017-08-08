@@ -2,6 +2,7 @@
 #define UTIL_PROBING_HASH_TABLE_H
 
 #include "util/exception.hh"
+#include "util/file.hh"
 #include "util/scoped.hh"
 
 #include <algorithm>
@@ -34,7 +35,7 @@ template <class EntryT, class HashT, class EqualT> class AutoProbing;
  * Memory management and initialization is externalized to make it easier to
  * serialize these to disk and load them quickly.
  * Uses linear probing to find value.
- * Only insert and lookup operations.  
+ * Only insert and lookup operations.
  */
 template <class EntryT, class HashT, class EqualT = std::equal_to<typename EntryT::Key> > class ProbingHashTable {
   public:
@@ -50,7 +51,7 @@ template <class EntryT, class HashT, class EqualT = std::equal_to<typename Entry
       return buckets * sizeof(Entry);
     }
 
-    // Must be assigned to later.  
+    // Must be assigned to later.
     ProbingHashTable() : entries_(0)
 #ifdef DEBUG
       , initialized_(false)
@@ -67,6 +68,19 @@ template <class EntryT, class HashT, class EqualT = std::equal_to<typename Entry
         entries_(0)
 #ifdef DEBUG
         , initialized_(true)
+#endif
+    {}
+
+    ProbingHashTable(void *start, std::size_t allocated, std::size_t entries, const Key &invalid = Key(), const Hash &hash_func = Hash(), const Equal &equal_func = Equal())
+      : begin_(reinterpret_cast<MutableIterator>(start)),
+        buckets_(allocated / sizeof(Entry)),
+        end_(begin_ + buckets_),
+        invalid_(invalid),
+        hash_(hash_func),
+        equal_(equal_func),
+        entries_(entries)
+#ifdef DEBUG
+      , initialized_(true)
 #endif
     {}
 
@@ -136,7 +150,7 @@ template <class EntryT, class HashT, class EqualT = std::equal_to<typename Entry
         if (equal_(got, key)) { out = i; return true; }
         if (equal_(got, invalid_)) return false;
         if (++i == end_) i = begin_;
-      }    
+      }
     }
 
     // Like Find but we're sure it must be there.
@@ -154,6 +168,10 @@ template <class EntryT, class HashT, class EqualT = std::equal_to<typename Entry
       invalid.SetKey(invalid_);
       std::fill(begin_, end_, invalid);
       entries_ = 0;
+    }
+
+    MutableIterator Begin() {
+      return begin_;
     }
 
     // Return number of entries assuming no serialization went on.
@@ -253,7 +271,7 @@ template <class EntryT, class HashT, class EqualT = std::equal_to<typename Entry
 #endif
 };
 
-// Resizable linear probing hash table.  This owns the memory.  
+// Resizable linear probing hash table.  This owns the memory.
 template <class EntryT, class HashT, class EqualT = std::equal_to<typename EntryT::Key> > class AutoProbing {
   private:
     typedef ProbingHashTable<EntryT, HashT, EqualT> Backend;
@@ -269,6 +287,19 @@ template <class EntryT, class HashT, class EqualT = std::equal_to<typename Entry
       allocated_(Backend::Size(initial_size, 1.5)), mem_(util::MallocOrThrow(allocated_)), backend_(mem_.get(), allocated_, invalid, hash_func, equal_func) {
       threshold_ = initial_size * 1.2;
       Clear();
+    }
+
+    // Constructor for initializing a hash table from a file saved on disk.
+    AutoProbing(char *file_name) {
+      int fd = util::OpenReadOrThrow(file_name);
+      // Read info about saved HashTable.
+      util::ReadOrThrow(fd, &allocated_, sizeof(std::size_t));
+      std::size_t entries;
+      util::ReadOrThrow(fd, &entries, sizeof(std::size_t));
+      util::ReadOrThrow(fd, &threshold_, sizeof(std::size_t));
+      mem_.reset(util::MallocOrThrow(allocated_));
+      util::ReadOrThrow(fd, mem_.get(), allocated_);
+      backend_ = Backend(mem_.get(), allocated_, entries, Key(), Hash(), Equal());
     }
 
     // Assumes that the key is unique.  Multiple insertions won't cause a failure, just inconsistent lookup.
@@ -302,6 +333,24 @@ template <class EntryT, class HashT, class EqualT = std::equal_to<typename Entry
       return backend_.SizeNoSerialization();
     }
 
+    std::size_t Allocated() const {
+      return allocated_;
+    }
+
+    std::size_t Threshold() const {
+      return threshold_;
+    }
+
+    void WriteToFile(char *name) {
+      util::scoped_fd f(util::CreateOrThrow(name));
+      util::WriteOrThrow(f.get(), &allocated_, sizeof(size_t));
+      std::size_t entries = Size();
+      util::WriteOrThrow(f.get(), &entries, sizeof(size_t));
+      util::WriteOrThrow(f.get(), &threshold_, sizeof(size_t));
+      MutableIterator begin = Begin();
+      util::WriteOrThrow(f.get(), begin, allocated_);
+    }
+
     void Clear() {
       backend_.Clear();
     }
@@ -314,6 +363,10 @@ template <class EntryT, class HashT, class EqualT = std::equal_to<typename Entry
       allocated_ = backend_.DoubleTo();
       backend_.Double(mem_.get());
       threshold_ *= 2;
+    }
+
+    MutableIterator Begin() {
+      return backend_.Begin();
     }
 
     std::size_t allocated_;
