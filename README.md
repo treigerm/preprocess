@@ -47,6 +47,12 @@ bin/shard $prefix $shard_count
 Shards stdin into multiple files named prefix0 prefix1 prefix2 etc.  This is useful when the deduper above runs out of memory.
 
 ```bash
+for i in $(seq 0 $((shard_count-1))); do mkfifo $prefix$i; done
+bin/shard_fifo $prefix $shard_count
+```
+Same as `bin/shard` but the output files can be named pipes.
+
+```bash
 bin/remove_long_lines $length_limit
 ```
 removes lines longer than the specified length in bytes.  The default is 2000 bytes.
@@ -94,4 +100,17 @@ Process the CommonCrawl n-grams raw files into the deduped files:
 * Remove lines beginning with df6fa1abb58549287111ba8d776733e9 (these mark document boundaries)
 * Strip leading and trailing whitespace
 * Deduplicate, preserving the first instance of the line
+* Remove any lines with invalid UTF-8
+
+```bash
+xzcat $language.*.raw.xz | commoncrawl_dedupe_save_table /dev/null /dev/null hash_table |xz >$language.deduped.xz
+```
+Same as `commoncrawl_dedupe` but it saves the hash table which is used to identify duplicate lines to disk.
+
+```bash
+xzcat $language.*.raw.xz | commoncrawl_clean | xz > $language.cleaned.xz
+```
+Process the CommonCrawl raw files so they can be sharded:
+* Remove lines beginning with df6fa1abb58549287111ba8d776733e9 (these mark document boundaries)
+* Strip leading and trailing whitespace
 * Remove any lines with invalid UTF-8
