@@ -2,7 +2,6 @@
 #define UTIL_PROBING_HASH_TABLE_H
 
 #include "util/exception.hh"
-#include "util/file.hh"
 #include "util/scoped.hh"
 
 #include <algorithm>
