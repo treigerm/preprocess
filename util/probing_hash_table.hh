@@ -297,9 +297,9 @@ template <class EntryT, class HashT, class EqualT = std::equal_to<typename Entry
 
     AutoProbing& operator=(AutoProbing &&other) {
       mem_.reset(other.mem_.release());
-      allocated_ = other.allocated_;
-      threshold_ = other.threshold_;
-      backend_ = other.backend_;
+      allocated_ = std::move(other.allocated_);
+      threshold_ = std::move(other.threshold_);
+      backend_ = std::move(other.backend_);
       return *this;
     }
 
