@@ -1,5 +1,5 @@
 // Tool to convert raw CommonCrawl files into deduplicated files.
-// Option to save the Hash Table which identifies duplicate lines to disk.
+// Includes option to save the hash table which identifies duplicate lines to disk.
 // Strips leading and trailing spaces.
 // Removes document delimiter lines (those that begin with df6fa1abb58549287111ba8d776733e9).
 // Removes duplicate lines.
@@ -9,6 +9,7 @@
 #include "util/file_piece.hh"
 #include "util/murmur_hash.hh"
 #include "util/probing_hash_table.hh"
+#include "util/serialize_hash_table.hh"
 #include "util/scoped.hh"
 #include "util/utf8.hh"
 
@@ -48,26 +49,24 @@ StringPiece StripSpaces(StringPiece ret) {
   return ret;
 }
 
-
 } // namespace
 
 int main(int argc, char *argv[]) {
-  if (argc > 4 || argc < 4 || (argc == 2 && (!strcmp("-h", argv[1]) || !strcmp("--help", argv[1])))) {
+  if (argc > 4 || argc < 4) {
     std::cerr << "Usage: " << argv[0] << " file_to_remove src_hash_table out_hash_table" << std::endl
               << "file_to_remove\teach line in this file won't be added to the output" << std::endl
               << "src_hash_table\thash table of a previous run of this program saved to disk" << std::endl
               << "out_hash_table\tfile name for writing the hash table to disk" << std::endl
-              << "If you do not want to provide any of the arguments substitue \"/dev/null\" at their place" << std::endl;
+              << "If you do not want to provide any of the arguments substitute \"/dev/null\" at their place" << std::endl;
     return 1;
   }
   try {
     Table table;
     StringPiece l;
 
-    // Load Hash Table from file if valid file name is given.
-    if (strcmp(argv[2], "/dev/null") != 0) {
-      table.~Table();
-      new (&table) Table(argv[2]);
+    // Read hash table if a file is given.
+    if (!strcmp("/dev/null", argv[2])) {
+      util::LoadTable(table, argv[2]);
     }
 
     // If there's a file to remove lines from, add it to the hash table of lines.
@@ -91,8 +90,8 @@ int main(int argc, char *argv[]) {
       }
     }
 
-    // Save Hash Table to disk.
-    table.WriteToFile(argv[3]);
+    // Save hash table to disk.
+    util::SaveTable(table, argv[3]);
   }
   catch (const std::exception &e) {
     std::cerr << e.what() << std::endl;
